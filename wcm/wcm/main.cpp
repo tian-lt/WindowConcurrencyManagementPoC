@@ -1,5 +1,7 @@
 // std
+#include <chrono>
 #include <functional>
+#include <thread>
 #include <unordered_map>
 
 // winrt
@@ -53,6 +55,14 @@ public:
     UpdateWindow(wnd.hwnd_);
     ShowWindow(wnd.hwnd_, cmdshow);
     return wnd;
+  }
+
+  void UpdateCounter(int value) {
+    SetWindowTextW(txtCounter_, std::to_wstring(value).c_str());
+  }
+
+  void UpdateText(const std::wstring &text) {
+    SetWindowTextW(txtCounter_, text.c_str());
   }
 
   HWND Handle() const noexcept { return hwnd_; }
@@ -112,7 +122,9 @@ private:
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 10, offset, 200,
         30, hwnd_, (HMENU)cmd,
         (HINSTANCE)GetWindowLongPtr(hwnd_, GWLP_HINSTANCE), nullptr));
-    cmds_[DemoCommand::BadTask] = std::forward<F>(f);
+    cmds_[DemoCommand::BadTask] = [f = std::forward<F>(f)](Window *wnd) {
+      f(wnd);
+    };
     offset += 50;
   }
 
@@ -122,9 +134,17 @@ private:
         30, hwnd_, nullptr, (HINSTANCE)GetWindowLongPtr(hwnd_, GWLP_HINSTANCE),
         nullptr);
     winrt::check_bool(txtCounter_);
-    int cmdOffset = 10;
+    int cmdOffset = 50;
     CreateCommand(cmdOffset, DemoCommand::BadTask, TEXT("Bad Task (5s)"),
-        [](Window *) { MessageBox(nullptr, nullptr, nullptr, MB_OK); });
+                  [](Window *wnd) -> winrt::fire_and_forget {
+                    winrt::apartment_context ctx;
+                    for (int i = 0; i < 5; ++i) {
+                      wnd->UpdateCounter(5 - i);
+                      co_await winrt::resume_after(std::chrono::seconds{1});
+                      co_await ctx;
+                    }
+                    wnd->UpdateText(L"Done");
+                  });
   }
 
 private:
@@ -136,9 +156,16 @@ private:
 } // namespace
 
 int WINAPI WinMain(HINSTANCE hinst, HINSTANCE, LPSTR, int cmdshow) {
-  winrt::init_apartment(winrt::apartment_type::single_threaded);
-  auto wnd = Window::Create(hinst, cmdshow);
-  wnd.Run();
+  winrt::init_apartment(winrt::apartment_type::multi_threaded);
+  std::jthread windowThread([hinst, cmdshow] {
+    winrt::init_apartment(winrt::apartment_type::single_threaded);
+    auto wnd = Window::Create(hinst, cmdshow);
+    wnd.Run();
+    winrt::uninit_apartment();
+  });
+  windowThread.join();
+  std::this_thread::sleep_for(std::chrono::seconds{
+      5}); // wait for a while to observe potential race condition problems.
   winrt::uninit_apartment();
   return 0;
 }
