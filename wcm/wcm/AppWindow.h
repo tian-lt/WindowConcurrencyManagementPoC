@@ -112,7 +112,7 @@ private:
 
   void CreateBuiltinControls() {
     txtCounter_ = CreateWindow(
-        TEXT("STATIC"), TEXT("0"), WS_VISIBLE | WS_CHILD | SS_LEFT, 10, 10, 160,
+        TEXT("STATIC"), TEXT("0"), WS_VISIBLE | WS_CHILD | SS_LEFT, 10, 10, 460,
         30, hwnd_, nullptr, (HINSTANCE)GetWindowLongPtr(hwnd_, GWLP_HINSTANCE),
         nullptr);
     winrt::check_bool(txtCounter_);

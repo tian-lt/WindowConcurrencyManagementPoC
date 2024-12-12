@@ -53,7 +53,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE, LPSTR, int cmdshow) {
             auto cancelToken = co_await winrt::get_cancellation_token();
             cancelToken.enable_propagation();
             winrt::apartment_context apartment;
-            co_await winrt::resume_after(std::chrono::seconds{10});
+            co_await winrt::resume_after(std::chrono::seconds{5});
             co_await apartment;
             wnd->UpdateText(
                 L"Failed to cancel. Hope you don't see this message.");
@@ -74,7 +74,7 @@ int WINAPI WinMain(HINSTANCE hinst, HINSTANCE, LPSTR, int cmdshow) {
   });
   windowThread.join();
   std::this_thread::sleep_for(std::chrono::seconds{
-      2}); // wait for a while to observe potential race condition problems.
+      1}); // wait for a while to observe potential race condition problems.
   winrt::uninit_apartment();
   return 0;
 }
